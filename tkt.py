@@ -13,33 +13,33 @@ d = list(
 # In[]
 w, f = zip(*d)
 f = np.array(f)
-print(w[:4])
 print(np.exp(f[4:]).sum())
 
 l = list(map(len, w[4:]))
 freq = sorted(dict(Counter(l)).items(), key=lambda x: x[0])
 print('\n'.join(f'|{i}|{j}|' for i, j in freq))
 # In[]
-ds = NewsDataset('data/news_dataset_clean.db')
+ds = NewsDataset('data/news_dataset_clean_v1.4.1.db')
+# ds = NewsDataset('data/wiki.db')
 tk = Tokenizer('data/tk')
 
 # In[]
+from src.utils import peek
+d = peek(ds.data, 1)
+print(d[0][2])
+print(tk.detokenize(tk.tokenize(d[0][2])))
+# In[]
 ll = list(map(lambda x:len(x[2]), ds.data))
-# In[]
-import numpy as np
 sl = sorted(ll)
-# In[]
+print(sl[0])
 print(sl[int(len(sl)*0.25)])
 print(sl[int(len(sl)*0.5)])
 print(sl[int(len(sl)*0.75)])
+print(sl[-1])
 
 # In[]
-tk.tokenize('<unk>adsf')
-# In[]
-
 N = 0
 UNK = set()
-
 
 for idx, t, a in ds.data:
     N += len(t) + len(a)
@@ -61,9 +61,46 @@ for idx, t, a in ds.data:
             UNK.add(a[idx])
 
 #In[]
-for idx, t, a in ds.data:
-    tt = tk.tokenize(t, bos=False, eos=False)
-    ta = tk.tokenize(a, bos=False, eos=False)
+from tqdm import tqdm
+tl = []
+al = []
+for idx, t, a in tqdm(ds.data):
+    tl.append(len(tk.tokenize(t, bos=False, eos=False)))
+    al.append(len(tk.tokenize(a, bos=False, eos=False)))
+
+tl=np.array(tl)
+al=np.array(al)
+
+#In[]
+import matplotlib.pyplot as plt
+
+ll = list(filter(lambda x:x[0]!=0 and x[1]!=0, zip(tl, al)))
+
+ll = np.array(ll)
+
+#In[]
+plt.hist(ll[:,0], bins=31, range=(0,30))
+plt.show()
+# plt.savefig('title.jpg', bins=200)
+# plt.close()
+
+plt.hist(ll[:,1], bins=1000, range=(0, 1000))
+plt.show()
+# plt.savefig('article.jpg')
+# plt.close()
+
+#In[]
+def a(ll):
+    sl = sorted(ll)
+    print(np.mean(sl))
+    print(np.std(sl))
+    print(sl[0])
+    print(sl[-1])
+    print(sl[int(len(sl)*0.25)])
+    print(sl[int(len(sl)*0.5)])
+    print(sl[int(len(sl)*0.75)])
+a(tl)
+a(al)
 
 # In[]
 import json

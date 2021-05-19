@@ -9,57 +9,71 @@ from src.decode import beam_search_v2
 from src.dataset import NewsDataset
 from src.transformer_model import TransformerModel
 from src.tokenizer import Tokenizer
-
+from src.utils import peek, find_latest_ckpt
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--inseq', default='瞞騙父母種水耕蔬菜 他3年將自家冰庫打造成2千萬大麻花園',type=str)
-
+    parser.add_argument('--inseq', type=str, nargs='+')
     parser.add_argument('--data', type=str, default='data/news_dataset.db')
-    parser.add_argument('--tokenizer',default='data/tk', type=str)
-    parser.add_argument('--seed', default=8787, type=int)
+
+    parser.add_argument('--peek', type=int, default=1)
+    parser.add_argument('--hide_tgt', action='store_true')
+    parser.add_argument('--tokenizer', default='data/tk', type=str)
+    parser.add_argument('--seed', type=int)
     parser.add_argument('--batch_size', default=64, type=int)
-    parser.add_argument('--ckpt', default='', type=str)
+    parser.add_argument('--model_dir', type=str)
+    parser.add_argument('--ckpt', default='latest', type=str)
+    parser.add_argument('--ckpt_pattern', default=r'(\d+).pt', type=str)
     parser.add_argument('--device', default='cpu', type=str)
     return parser.parse_args()
 
 
 def main(args):
-    set_seed(args.seed)
+    set_seed(args.seed) if args.seed is not None else None
 
     tk = Tokenizer(args.tokenizer)
-
-    ds = NewsDataset(args.data)
-
-    dl = torch.utils.data.DataLoader(
-        dataset=ds,
-        batch_size=args.batch_size,
-        shuffle=False,
-        collate_fn=ds.get_collate_fn(tk)
-    )
 
     model = TransformerModel(
         d_model=768,
         d_ff=1024,
         dropout=.1,
-        layers=6,
+        layers=5,
         heads=8,
         d_emb=-1,
         pad_token_id=tk.pad_id,
         vocab_size=tk.vocab_size
     )
 
-    device = torch.device(args.device)
+    if args.inseq is not None:
+        r = beam_search_v2(model, tk.tokenize(args.inseq), tk,
+                       lambda b, nx, ny: (nx + ny) * b > 128 * 64, 4, args.device, 64)
+    else:
+        if args.peek == 0:
+            return
+        ds = NewsDataset(args.data)
 
-    model.load_state_dict(torch.load(args.ckpt, map_location=device)['model'])
-    model.to(device)
-    start = timeit.default_timer()
-    # r = beam_search(model, torch.LongTensor(tk.tokenize([args.inseq])).to(
-    r = beam_search_v2(model, tk.tokenize([args.inseq]), tk,
-        lambda b, nx, ny: (nx + ny) * b > 128 * 64, 4, device, 64)
-    print((timeit.default_timer()-start))
-    print(tk.detokenize(r))
+        device = torch.device(args.device)
+
+        if args.ckpt == 'latest':
+            args.ckpt = find_latest_ckpt(args.model_dir, args.ckpt_pattern)
+        model.load_state_dict(torch.load(args.ckpt, map_location=device)['model'])
+        model.to(device)
+        start = timeit.default_timer()
+        data = peek(ds.data, args.peek)
+        _,titles,_= zip(*data)
+        pred = beam_search_v2(model, tk.tokenize(list(titles)), tk,
+                       lambda b, nx, ny: (nx + ny) * b > 128 * 64, 4, args.device, 64)
+        for (idx, t, a), p in zip(data, pred):
+            print(f'[{idx}] : {t}')
+            if not args.hide_tgt:
+                print('-' * 25 + 'text' + '-' * 25)
+                print(a)
+            print('-' * 25 + 'pred' + '-' * 25)
+            print(tk.detokenize(p))
+            print('=' * 50)
+
+        print((timeit.default_timer()-start))
 
 
 def set_seed(seed):

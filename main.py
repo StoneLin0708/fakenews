@@ -25,13 +25,15 @@ def set_seed(seed):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default='data/news_dataset_clean.db')
+    parser.add_argument('--data', type=str, default='data/news_dataset_clean_v1.4.1.db')
     parser.add_argument('--tokenizer', type=str, default='data/tk')
     parser.add_argument('--epochs', default=20, type=int)
     parser.add_argument('--seed', default=8787, type=int)
     parser.add_argument('--save_epoch', default=1, type=float)
-    parser.add_argument('--summary_step', default=50, type=int)
-    parser.add_argument('--batch_size', default=14, type=int)
+    parser.add_argument('--warnup', default=1., type=float)
+    parser.add_argument('--lr', default=1e-5, type=float)
+    parser.add_argument('--summary_step', default=200, type=int)
+    parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--model_dir', default='model/0', type=str)
     parser.add_argument('--ckpt', type=str)
     return parser.parse_args()
@@ -47,7 +49,7 @@ def main(args):
         d_model=768,
         d_ff=1024,
         dropout=.1,
-        layers=6,
+        layers=5,
         heads=8,
         d_emb=-1,
         pad_token_id=tk.pad_id,
@@ -70,7 +72,9 @@ def main(args):
         epochs=args.epochs,
         model_dir=args.model_dir,
         save_epoch=args.save_epoch,
-        summary_step=args.summary_step)
+        summary_step=args.summary_step,
+        lr=args.lr,
+        warnup=args.warnup)
 
 
 if __name__ == '__main__':

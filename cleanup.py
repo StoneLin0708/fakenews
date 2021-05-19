@@ -6,9 +6,9 @@ import sqlite3
 import os
 import numpy as np
 
-original = 'data/news_v1.1.db'
-dataset = 'data/news_dataset.db'
-cleandataset = 'data/news_dataset_clean.db'
+original = 'data/news_v1.4.1.db'
+dataset = 'data/news_dataset_v1.4.1.db'
+cleandataset = 'data/news_dataset_clean_v1.4.1.db'
 
 
 def extract(source, target):
