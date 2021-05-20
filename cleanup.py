@@ -5,10 +5,11 @@ from src.dataset import NewsDataset
 import sqlite3
 import os
 import numpy as np
+import argparse
 
 original = 'data/news_v1.4.1.db'
 dataset = 'data/news_dataset_v1.4.1.db'
-cleandataset = 'data/news_dataset_clean_v1.4.1.db'
+cleandataset = 'data/news_dataset_clean_200_v1.4.1.db'
 
 
 def extract(source, target):
@@ -131,10 +132,10 @@ def makeclean(cleandataset):
 
     dc.executemany(
         'INSERT INTO news_dataset (id, title, article) VALUES (?,?,?);',
-        map(lambda x: (
-            x[0],
-            x[1],
-            cleanup(x[2])), ds.data))
+        filter(lambda i: len(i[2]) >= 200,
+               map(lambda x: (x[0], x[1], cleanup(x[2])),
+                   ds.data)
+               ))
 
     dataset.commit()
 

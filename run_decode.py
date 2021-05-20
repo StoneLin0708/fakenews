@@ -16,9 +16,12 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--inseq', type=str, nargs='+')
     parser.add_argument('--data', type=str, default='data/news_dataset.db')
+    parser.add_argument('-a', type=float, default=0)
+    parser.add_argument('-b', type=int, default=64)
 
     parser.add_argument('--peek', type=int, default=1)
     parser.add_argument('--hide_tgt', action='store_true')
+    parser.add_argument('--markdown', action='store_true')
     parser.add_argument('--tokenizer', default='data/tk', type=str)
     parser.add_argument('--seed', type=int)
     parser.add_argument('--batch_size', default=64, type=int)
@@ -51,7 +54,14 @@ def main(args):
     else:
         if args.peek == 0:
             return
-        ds = NewsDataset(args.data)
+        ds = NewsDataset(args.data,args.a,args.b)
+
+        dl = torch.utils.data.DataLoader(
+            dataset=ds,
+            batch_size=args.peek,
+            shuffle=True,
+            collate_fn=ds.get_collate_fn(tk),
+        )
 
         device = torch.device(args.device)
 
@@ -59,19 +69,24 @@ def main(args):
             args.ckpt = find_latest_ckpt(args.model_dir, args.ckpt_pattern)
         model.load_state_dict(torch.load(args.ckpt, map_location=device)['model'])
         model.to(device)
+        data = next(iter(dl))
         start = timeit.default_timer()
-        data = peek(ds.data, args.peek)
-        _,titles,_= zip(*data)
-        pred = beam_search_v2(model, tk.tokenize(list(titles)), tk,
+        pred = beam_search_v2(model, data[0], tk,
                        lambda b, nx, ny: (nx + ny) * b > 128 * 64, 4, args.device, 64)
-        for (idx, t, a), p in zip(data, pred):
-            print(f'[{idx}] : {t}')
+        for t, a, p in zip(data[0], data[1], pred):
+            if args.markdown:
+                print(f'|{tk.detokenize(t)}|',end='')
+            else:
+                print(tk.detokenize(t))
             if not args.hide_tgt:
                 print('-' * 25 + 'text' + '-' * 25)
-                print(a)
-            print('-' * 25 + 'pred' + '-' * 25)
-            print(tk.detokenize(p))
-            print('=' * 50)
+                print(tk.detokenize(a))
+            if args.markdown:
+                print(f'{tk.detokenize(p)}|')
+            else:
+                print('-' * 25 + 'pred' + '-' * 25)
+                print(tk.detokenize(p))
+                print('=' * 50)
 
         print((timeit.default_timer()-start))
 

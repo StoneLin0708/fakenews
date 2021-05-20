@@ -7,23 +7,25 @@ from src.decode import beam_search
 from src.utils import markdown_pred_summary
 
 
+def linear_warnup_lr_ratio(step, warnup, total_steps):
+    if step < warnup:
+        return float(step) / float(max(1, warnup))
+    return max(0.,
+               float(total_steps - step) / float(max(1, total_steps - warnup)))
+
+
 class Optimizer:
-    def __init__(self, init_lrs, optimizer, d_model, warnup, total_steps, init_step=1):
+    def __init__(self, init_lrs, optimizer, d_model, warnup, total_steps, get_lr_ratio, init_step=1):
         self.lrs = init_lrs
         self.opti = optimizer
         self._step = init_step
         self.warnup = warnup
         self.d_model = d_model
         self.total_steps = total_steps
-
-    def get_lr_ratio(self):
-        if self._step < self.warnup:
-            return float(self._step) / float(max(1, self.warnup))
-        return max(0.,
-                   float(self.total_steps - self._step) / float(max(1, self.total_steps - self.warnup)))
+        self.get_lr_ratio = get_lr_ratio
 
     def get_lr(self):
-        ratio = self.get_lr_ratio()
+        ratio = self.get_lr_ratio(self._step, self.warnup, self.total_steps)
         return [lr * ratio for lr in self.lrs]
 
     def step(self):
@@ -69,7 +71,8 @@ def train(
         dataset=dataset,
         batch_size=batch_size,
         shuffle=True,
-        collate_fn=dataset.get_collate_fn(tokenizer)
+        collate_fn=dataset.get_collate_fn(tokenizer),
+        num_workers=2,
     )
 
     criterion = torch.nn.CrossEntropyLoss()
@@ -79,7 +82,8 @@ def train(
         optimizer=torch.optim.Adam([{'params': model.parameters()}], lr=lr),
         d_model=model.d_model,
         warnup=len(dataloader)*warnup,
-        total_steps=len(dataloader)*epochs)
+        total_steps=len(dataloader)*epochs,
+        get_lr_ratio=linear_warnup_lr_ratio if warnup > 0 else lambda _: 1)
 
     summary = tensorboard.SummaryWriter(os.path.join(model_dir, 'log'))
 
@@ -137,7 +141,12 @@ def train(
 
             if global_steps % save_step == 0:
                 for s, p, t in sample_fristk(src, tgt, pred):
-                    print(f'{s}\n{t}\n{p}\n-------------------')
+                    print(s)
+                    print('-'*40)
+                    print(p)
+                    print('-'*40)
+                    print(t)
+                    print('='*45)
                 torch.save({
                     'model': model.state_dict(),
                     'optimizer': optimizer.state_dict(),

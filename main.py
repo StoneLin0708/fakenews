@@ -25,16 +25,22 @@ def set_seed(seed):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default='data/news_dataset_clean_v1.4.1.db')
-    parser.add_argument('--tokenizer', type=str, default='data/tk')
+    parser.add_argument('--data', type=str, required=True)
+    parser.add_argument('--tokenizer', type=str, required=True)
     parser.add_argument('--epochs', default=20, type=int)
     parser.add_argument('--seed', default=8787, type=int)
+    parser.add_argument('--dropout', default=0.1, type=float)
     parser.add_argument('--save_epoch', default=1, type=float)
     parser.add_argument('--warnup', default=1., type=float)
+    parser.add_argument('--alpha', default=0.4, type=float)
+    parser.add_argument('--beta', default=64, type=int)
+    parser.add_argument('--sample', default=-1, type=int)
+    parser.add_argument('--inplace', action='store_true', default=False)
     parser.add_argument('--lr', default=1e-5, type=float)
+    parser.add_argument('--layer', default=5, type=int)
     parser.add_argument('--summary_step', default=200, type=int)
     parser.add_argument('--batch_size', default=16, type=int)
-    parser.add_argument('--model_dir', default='model/0', type=str)
+    parser.add_argument('--model_dir',  type=str, required=True)
     parser.add_argument('--ckpt', type=str)
     return parser.parse_args()
 
@@ -48,15 +54,16 @@ def main(args):
     model = TransformerModel(
         d_model=768,
         d_ff=1024,
-        dropout=.1,
-        layers=5,
-        heads=8,
+        dropout=args.dropout,
+        layers=args.layer,
+        heads=12,
         d_emb=-1,
         pad_token_id=tk.pad_id,
         vocab_size=tk.vocab_size
     )
 
-    ds = NewsDataset(args.data)
+    ds = NewsDataset(args.data, args.alpha, args.beta, inplace=args.inplace,
+                     sample=args.sample, seed=args.seed)
 
     print(
         f'model size = {sum(p.numel() for p in model.parameters() if p.requires_grad)/1024/1024:.2f} M trainable parameters')

@@ -19,7 +19,7 @@ l = list(map(len, w[4:]))
 freq = sorted(dict(Counter(l)).items(), key=lambda x: x[0])
 print('\n'.join(f'|{i}|{j}|' for i, j in freq))
 # In[]
-ds = NewsDataset('data/news_dataset_clean_v1.4.1.db')
+ds = NewsDataset('data/news_dataset_clean_200_v1.4.1.db')
 # ds = NewsDataset('data/wiki.db')
 tk = Tokenizer('data/tk')
 
