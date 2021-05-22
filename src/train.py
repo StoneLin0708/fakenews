@@ -83,7 +83,7 @@ def train(
         d_model=model.d_model,
         warnup=len(dataloader)*warnup,
         total_steps=len(dataloader)*epochs,
-        get_lr_ratio=linear_warnup_lr_ratio if warnup > 0 else lambda _: 1)
+        get_lr_ratio=linear_warnup_lr_ratio if warnup > 0 else lambda a, b, c: 1)
 
     summary = tensorboard.SummaryWriter(os.path.join(model_dir, 'log'))
 
@@ -114,7 +114,7 @@ def train(
         for local_step, (src, tgt) in enumerate(epoch_it, start=1):
             global_steps += 1
 
-            src = pad(src, 32)
+            src = pad(src, 512)
             tgt = pad(tgt, 513)
 
             pred = model(src=src, tgt=tgt[:, :-1])

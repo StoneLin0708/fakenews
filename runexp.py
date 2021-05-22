@@ -1,11 +1,8 @@
 import subprocess
+import os
 
-tkname = 'data/tk1.4.1_200'
-ds = 'data/news_dataset_clean_200_v1.4.1.db'
-sample = 1000
-batch_size = 12
-save_epoch= 2
-summary_step= 20
+tkname = 'data/tk1.6.2_200_tag10'
+ds = 'data/news_dataset_200_tag10_v1.6.2.db'
 
 confs = [
     {
@@ -14,29 +11,102 @@ confs = [
         'alpha':1,
         'inplace' : True,
         'lr':'1e-3',
-        'batch_size' : batch_size,
-        'sample' : sample,
-        'save_epoch': save_epoch,
-        'summary_step': summary_step,
-    }
+        'dropout': 0,
+        'heads': 12,
+        'batch_size' : 12,
+        'sample' : 1000,
+        'save_epoch': 4,
+        'summary_step': 20,
+        'epoch': 20,
+    },
+    {
+        'name': 'model/v141_200_6l_c4_1000_a0:100',
+        'warnup': -1,
+        'alpha':1,
+        'inplace' : True,
+        'lr':'1e-4',
+        'dropout': 0,
+        'heads': 12,
+        'batch_size' : 12,
+        'sample' : 1000,
+        'save_epoch': 4,
+        'summary_step': 1000,
+        'epoch': 20,
+    },
+    {
+        'name': 'model/v141_200_5l_w24_all',
+        'warnup': 1,
+        'alpha': 0,
+        'beta': 128,
+        'inplace' : True,
+        'lr':'2e-4',
+        'dropout': 0.1,
+        'batch_size' : 12,
+        'heads': 8,
+        'layer': 5,
+        'sample' : -1,
+        'save_epoch': 2,
+        'summary_step': 1000,
+        'epoch': 10,
+    },
 ]
 
 for conf in confs:
+    if os.path.exists(conf['name']):
+        continue
     cmd = ['python','main.py',
                 '--data', ds,
                 '--tokenizer', tkname,
                 '--model_dir', conf['name'],
-                '--epoch', '20',
-                '--save_epoch', str(conf['save_epoch']),
-                '--summary_step', str(conf['summary_step']),
+                '--epoch', conf['epoch'],
+                '--save_epoch', conf['save_epoch'],
+                '--summary_step', conf['summary_step'],
                 '--lr', conf['lr'],
-                '--warnup', str(conf['warnup']),
-                '--layer', '6',
-                '--alpha', str(conf['alpha']),
-                '--beta', '64',
-                '--batch_size', str(conf['batch_size']),
-                '--sample', str(conf['sample'])
+                '--warnup', conf['warnup'],
+                '--layer', conf['layer'],
+                '--dropout', conf['dropout'],
+                '--alpha', conf['alpha'],
+                '--beta', conf['beta'],
+                '--seed', 8787,
+                '--batch_size', conf['batch_size'],
+                '--sample', conf['sample']
                 ]
     if conf['inplace']:
         cmd.append('--inplace')
+    subprocess.run(list(map(str, cmd)))
+
+exit()
+
+for conf in confs:
+    cmd = list(map(str, ['python','run_decode.py',
+                '--data', ds,
+                '--tokenizer', tkname,
+                '--model_dir', conf['name'],
+                '--peek', 10,
+                '-a', 0,
+                '-b', 128,
+                '--layer', 6,
+                '--seed', str(8787),
+                '--inplace',
+                '--markdown',
+                '--device', 'cuda',
+                ]))
+
+    subprocess.run(cmd)
+
+    cmd = list(map(str, ['python','run_decode.py',
+                '--data', ds,
+                '--tokenizer', tkname,
+                '--model_dir', conf['name'],
+                '--peek', 10,
+                '-a', 1,
+                '-b', 128,
+                '--layer', 6,
+                '--seed', str(8787),
+                '--inplace',
+                '--markdown',
+                '--device', 'cuda',
+                '--inplace'
+                ]))
+
     subprocess.run(cmd)

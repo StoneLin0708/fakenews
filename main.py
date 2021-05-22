@@ -33,11 +33,12 @@ def parse_args():
     parser.add_argument('--save_epoch', default=1, type=float)
     parser.add_argument('--warnup', default=1., type=float)
     parser.add_argument('--alpha', default=0.4, type=float)
-    parser.add_argument('--beta', default=64, type=int)
+    parser.add_argument('--beta', default=128, type=int)
     parser.add_argument('--sample', default=-1, type=int)
     parser.add_argument('--inplace', action='store_true', default=False)
     parser.add_argument('--lr', default=1e-5, type=float)
     parser.add_argument('--layer', default=5, type=int)
+    parser.add_argument('--heads', default=12, type=int)
     parser.add_argument('--summary_step', default=200, type=int)
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--model_dir',  type=str, required=True)
@@ -56,7 +57,7 @@ def main(args):
         d_ff=1024,
         dropout=args.dropout,
         layers=args.layer,
-        heads=12,
+        heads=args.heads,
         d_emb=-1,
         pad_token_id=tk.pad_id,
         vocab_size=tk.vocab_size

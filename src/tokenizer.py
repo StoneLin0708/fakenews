@@ -1,4 +1,5 @@
 import sentencepiece as sp
+from transformers import BertTokenizer
 import argparse
 import os
 
@@ -17,6 +18,8 @@ class Tokenizer:
 
     def train(self, data_path, max_vocab,
               model_path, coverage, max_len):
+        tags = ','.join([f'<{j}{i}>' for j in ['per', 'loc', 'org']
+                        for i in range(10)])
         sp.SentencePieceTrainer.Train(
             f'--input={data_path} '
             f'--model_prefix={model_path} '
@@ -28,6 +31,8 @@ class Tokenizer:
             f'--max_sentence_length={20480} '
             f'--character_coverage={coverage} '
             f'--max_sentencepiece_length={max_len} '
+            # f'--control_symbols=<num>,<en>,<per>,<loc>,<org>,{tags} '
+            f'--user_defined_symbols=<num>,<en>,<per>,<loc>,<org>,{tags} '
         )
 
     def load(self, model_path):

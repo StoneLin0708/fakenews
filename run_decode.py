@@ -15,16 +15,19 @@ from src.utils import peek, find_latest_ckpt
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--inseq', type=str, nargs='+')
-    parser.add_argument('--data', type=str, default='data/news_dataset.db')
+    parser.add_argument('--data', type=str, required=True)
     parser.add_argument('-a', type=float, default=0)
     parser.add_argument('-b', type=int, default=64)
 
+    parser.add_argument('--layer', default=5, type=int)
     parser.add_argument('--peek', type=int, default=1)
     parser.add_argument('--hide_tgt', action='store_true')
     parser.add_argument('--markdown', action='store_true')
-    parser.add_argument('--tokenizer', default='data/tk', type=str)
+    parser.add_argument('--tokenizer', required=True, type=str)
     parser.add_argument('--seed', type=int)
+    parser.add_argument('--inplace', action='store_true', default=False)
     parser.add_argument('--batch_size', default=64, type=int)
+    parser.add_argument('--sample', default=-1, type=int)
     parser.add_argument('--model_dir', type=str)
     parser.add_argument('--ckpt', default='latest', type=str)
     parser.add_argument('--ckpt_pattern', default=r'(\d+).pt', type=str)
@@ -40,9 +43,9 @@ def main(args):
     model = TransformerModel(
         d_model=768,
         d_ff=1024,
-        dropout=.1,
-        layers=5,
-        heads=8,
+        dropout=0,
+        layers=args.layer,
+        heads=12,
         d_emb=-1,
         pad_token_id=tk.pad_id,
         vocab_size=tk.vocab_size
@@ -54,7 +57,7 @@ def main(args):
     else:
         if args.peek == 0:
             return
-        ds = NewsDataset(args.data,args.a,args.b)
+        ds = NewsDataset(args.data,args.a,args.b,inplace=args.inplace,sample=args.sample,seed=args.seed)
 
         dl = torch.utils.data.DataLoader(
             dataset=ds,
@@ -78,15 +81,18 @@ def main(args):
                 print(f'|{tk.detokenize(t)}|',end='')
             else:
                 print(tk.detokenize(t))
-            if not args.hide_tgt:
-                print('-' * 25 + 'text' + '-' * 25)
-                print(tk.detokenize(a))
             if args.markdown:
-                print(f'{tk.detokenize(p)}|')
+                print(f'{tk.detokenize(p)}|', end='')
             else:
                 print('-' * 25 + 'pred' + '-' * 25)
                 print(tk.detokenize(p))
                 print('=' * 50)
+            if not args.hide_tgt:
+                if args.markdown:
+                    print(f'{tk.detokenize(a)}|')
+                else:
+                    print('-' * 25 + 'text' + '-' * 25)
+                    print(tk.detokenize(a))
 
         print((timeit.default_timer()-start))
 

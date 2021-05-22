@@ -17,9 +17,10 @@ class NewsDataset(torch.utils.data.Dataset):
         # Get all news title and article.
         cursor.execute("SELECT id, title, article FROM news_dataset;")
         data = cursor.fetchall()
-        if sample > 0:
+        if sample is not None and sample > 0:
             N = len(data)
-            idx = np.random.default_rng(seed=seed).choice(N, sample, replace=False)
+            idx = np.random.default_rng(seed=seed).choice(
+                N, sample, replace=False)
             data = [data[i] for i in idx]
         self.data = data
         self.a = a

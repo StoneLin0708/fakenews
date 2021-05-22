@@ -8,7 +8,7 @@ import numpy as np
 d = list(
     map(lambda x: (x[0], float(x[1])),
         map(lambda x: x.strip().split('\t'),
-        filter(len, open('data/tk.vocab').readlines()))))
+        filter(len, open('data/tk1.6.2_200_tag10.vocab').readlines()))))
 
 # In[]
 w, f = zip(*d)
@@ -19,9 +19,9 @@ l = list(map(len, w[4:]))
 freq = sorted(dict(Counter(l)).items(), key=lambda x: x[0])
 print('\n'.join(f'|{i}|{j}|' for i, j in freq))
 # In[]
-ds = NewsDataset('data/news_dataset_clean_200_v1.4.1.db')
+ds = NewsDataset('data/news_dataset_200_tag10_v1.6.2.db')
 # ds = NewsDataset('data/wiki.db')
-tk = Tokenizer('data/tk')
+tk = Tokenizer('data/tk1.6.2_200_tag10')
 
 # In[]
 from src.utils import peek
