@@ -36,7 +36,7 @@ class NewsDataset(torch.utils.data.Dataset):
     def get_collate_fn(self, tk):
         def collect_fn(seq):
             _, x, y = zip(*seq)
-            x, y = tk.tokenize(list(x)), tk.tokenize(list(y))
+            x, y = list(x), list(y)
             if self.a > 0:
                 idxs = np.random.choice(len(x), int(
                     len(x) * self.a), replace=False)
@@ -48,7 +48,7 @@ class NewsDataset(torch.utils.data.Dataset):
                     for idx in idxs:
                         x.append(x[idx] + y[idx][:self.b])
                         y.append(y[idx][self.b:])
-            return x, y
+            return tk.tokenize(list(x)), tk.tokenize(list(y))
         return collect_fn
 
 

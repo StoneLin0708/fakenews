@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument('-b', type=int, default=64)
 
     parser.add_argument('--layer', default=5, type=int)
+    parser.add_argument('--heads', default=12, type=int)
     parser.add_argument('--peek', type=int, default=1)
     parser.add_argument('--hide_tgt', action='store_true')
     parser.add_argument('--markdown', action='store_true')
@@ -45,7 +46,7 @@ def main(args):
         d_ff=1024,
         dropout=0,
         layers=args.layer,
-        heads=12,
+        heads=args.heads,
         d_emb=-1,
         pad_token_id=tk.pad_id,
         vocab_size=tk.vocab_size

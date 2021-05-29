@@ -84,6 +84,8 @@ def main(args):
         lr=args.lr,
         warnup=args.warnup)
 
+    torch.cuda.empty_cache()
+
 
 if __name__ == '__main__':
     main(parse_args())
