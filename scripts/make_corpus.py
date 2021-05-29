@@ -16,13 +16,11 @@ def getargs():
 
 def gen(datasets, samples):
     for ds, sample in zip(datasets, samples):
-        for idx in np.random.choice(len(ds), int(len(ds)*sample)):
+        for idx in tqdm(np.random.choice(len(ds), int(len(ds)*sample))):
             i = ds.data[idx]
-            a = '\n'.join(
-                map(lambda x: i[2][x:x+4096], range(0, len(i[2]), 4096)))
-            a = f'{i[1]}\n{a}\n'
-            if max(map(len, a.split('\n'))) > 4096:
-                print(max(map(len, a.split('\n'))))
+            a = f'{i[1]}\n{i[2][:4096]}\n'
+            # if max(map(len, a.split('\n'))) > 4096:
+            #    print(max(map(len, a.split('\n'))))
             yield a
 
 
@@ -34,9 +32,6 @@ if __name__ == '__main__':
         print(f'corpus {args.out} exists')
         exit()
     ds = list(map(NewsDataset, args.data))
-    open(args.out, 'w').writelines(
-        tqdm(gen(ds, args.sample), total=sum(
-            map(lambda x: int(x[0]*x[1]), zip(map(len, ds), args.sample))))
-    )
+    open(args.out, 'w').writelines(gen(ds, args.sample))
 
 # print(max(map(len, open('data/corpus.txt').readlines())))

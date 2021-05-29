@@ -8,9 +8,9 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 
-original = 'data/news_v1.6.2.db'
-dataset = 'data/news_dataset_v1.6.2.db'
-cleantagdataset = 'data/news_dataset_200_tag10_v1.6.2.db'
+original = 'data/news_v2.1.db'
+dataset = 'data/news_dataset_v2.1.db'
+cleantagdataset = 'data/news_dataset_tag10_v2.1.db'
 cleandataset = 'data/news_dataset_clean_200_v1.6.2.db'
 
 
@@ -34,7 +34,7 @@ def extract(source, target):
         N += len(i)
         dc.executemany(
             'INSERT INTO news_dataset (id, title, article) VALUES (?,?,?);',
-            i)
+            filter(lambda x:len(x[1])>0, i))
         dataset.commit()
         if len(i) < 1000:
             break
@@ -52,6 +52,7 @@ N = len(ds.data)
 t_len = list(map(lambda x: len(x[1]), ds.data))
 a_len = list(map(lambda x: len(x[2]), ds.data))
 
+
 def analysis(d):
     s = np.array(sorted(d))
     return (np.average(s),
@@ -66,27 +67,39 @@ def analysis(d):
 
 print(analysis(t_len))
 print(analysis(a_len))
+# In[]
+for i, t, a in ds.data:
+    if len(t) < 3:
+        print(i)
+        print(len(t))
+        print(t)
+        break
 
 # In[]
-for _,t,a in ds.data:
+for _, t, a in ds.data:
     if '<en>>' in a:
         print(a)
         break
 # In[]
-tagreg = re.compile(r'(<...?([0-9]*)>)')
+tagreg = re.compile(r'(<...?([0-9]+)>)')
 
-alltags = [tagreg.findall(t + a) for idx,(_id, t, a) in tqdm(enumerate(ds.data), total=len(ds.data))]
+alltags = [tagreg.findall(t + a) for idx, (_id, t, a)
+           in tqdm(enumerate(ds.data), total=len(ds.data))]
 
-alltaglist = [j for i in filter(lambda x:len(x)>0, alltags) for j in i]
-#In[]
+alltaglist = [j for i in filter(lambda x:len(x) > 0, alltags) for j in i]
+# In[]
+
+
 def unique(seq):
     seen = set()
     return [x for x in seq if not (x in seen or seen.add(x))]
+
 
 # alltagset = unique(alltaglist)
 # print(set(alltaglist))
 print(set(map(lambda x: x[0][:5], alltaglist)))
 # In[]
+
 
 def replace_tag(t, a, tagseq, newtagpat, limitpat, limit=10):
     for i, n in enumerate(tagseq):
@@ -102,40 +115,44 @@ def replace_tag(t, a, tagseq, newtagpat, limitpat, limit=10):
     a = re.sub(r'<tmptag([0-9]+)>', newtagpat, a)
     return t, a
 
+
 def ordertag():
-    for idx,(_id, t, a) in tqdm(enumerate(ds.data), total=len(ds.data)):
+    for idx, (_id, t, a) in tqdm(enumerate(ds.data), total=len(ds.data)):
         tags = tagreg.findall(t + a)
         tags = [(n, int(c) if len(c) > 0 else None) for n, c in tags]
         if len(tags) == 0:
             continue
-        
-        for tagpat, rep ,lmpt in [
-                ('<org', r'<org\1>', '<org>'),
-                ('<loc', r'<loc\1>', '<loc>'),
-                ('<per', r'<per\1>', '<per>'),
-            ]:
-            cur_tags = unique(list(filter(lambda x: x[0].startswith(tagpat), tags)))
-            t, a = replace_tag(t,a,[n for n,_ in cur_tags] , rep, lmpt)
+
+        for tagpat, rep, lmpt in [
+            ('<org', r'<org\1>', '<org>'),
+            ('<loc', r'<loc\1>', '<loc>'),
+            ('<per', r'<per\1>', '<per>'),
+        ]:
+            cur_tags = unique(
+                list(filter(lambda x: x[0].startswith(tagpat), tags)))
+            t, a = replace_tag(t, a, [n for n, _ in cur_tags], rep, lmpt)
 
         ds.data[idx] = (_id, t, a)
+
 
 ordertag()
 
 # In[]
-if False:
+if True:
     def test2():
-        for idx,(_id, t, a) in tqdm(enumerate(ds.data), total=len(ds.data)):
+        for idx, (_id, t, a) in tqdm(enumerate(ds.data), total=len(ds.data)):
             tags = tagreg.findall(t + a)
             tags = [(n, int(c) if len(c) > 0 else None) for n, c in tags]
             if len(tags) == 0:
                 continue
             for tagpat, rep in [
-                    ('<org', r'<org\1>'),
-                    ('<loc', r'<loc\1>'),
-                    ('<per', r'<per\1>'),
-                ]:
-                cur_tags = unique(list(filter(lambda x: x[0].startswith(tagpat), tags)))
-                for i,(n,c) in enumerate(cur_tags):
+                ('<org', r'<org\1>'),
+                ('<loc', r'<loc\1>'),
+                ('<per', r'<per\1>'),
+            ]:
+                cur_tags = unique(
+                    list(filter(lambda x: x[0].startswith(tagpat), tags)))
+                for i, (n, c) in enumerate(cur_tags):
                     if i != c:
                         print('error')
                         return
@@ -143,12 +160,13 @@ if False:
 
 # In[]
 ll = []
-for idx,(_id, t, a) in tqdm(enumerate(ds.data), total=len(ds.data)):
+for idx, (_id, t, a) in tqdm(enumerate(ds.data), total=len(ds.data)):
     tags = tagreg.findall(t + a)
     tags = [(n, int(c) if len(c) > 0 else None) for n, c in tags]
     if len(tags) == 0:
         continue
-    l = [len(unique(list(filter(lambda x: x[0].startswith(tagpat), tags)))) for tagpat in ['<org','<loc','<per']]
+    l = [len(unique(list(filter(lambda x: x[0].startswith(tagpat), tags))))
+         for tagpat in ['<org', '<loc', '<per']]
     ll.append(l)
 lorg, lloc, lper = zip(*ll)
 
@@ -158,6 +176,8 @@ print(analysis(lloc))
 print(analysis(lper))
 
 # In[]
+
+
 def makecleantag(cleantagdataset):
     dataset = sqlite3.connect(cleantagdataset)
     dc = dataset.cursor()

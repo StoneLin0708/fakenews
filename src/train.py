@@ -146,7 +146,7 @@ def train(
                     print(p)
                     print('-'*40)
                     print(t)
-                    print('='*45)
+                    print('='*40)
                 torch.save({
                     'model': model.state_dict(),
                     'optimizer': optimizer.state_dict(),

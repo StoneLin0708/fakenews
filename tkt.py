@@ -4,24 +4,24 @@ from src.dataset import NewsDataset
 from collections import Counter
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
 d = list(
     map(lambda x: (x[0], float(x[1])),
         map(lambda x: x.strip().split('\t'),
-        filter(len, open('data/tk1.6.2_200_tag10.vocab').readlines()))))
+        filter(len, open('data/t2.1.vocab').readlines()))))
 
-# In[]
 w, f = zip(*d)
 f = np.array(f)
-print(np.exp(f[4:]).sum())
+print(np.exp(f[39:]).sum())
 
-l = list(map(len, w[4:]))
+l = list(map(len, w[39:]))
 freq = sorted(dict(Counter(l)).items(), key=lambda x: x[0])
 print('\n'.join(f'|{i}|{j}|' for i, j in freq))
 # In[]
-ds = NewsDataset('data/news_dataset_200_tag10_v1.6.2.db')
+ds = NewsDataset('data/news_dataset_tag10_v2.1.db')
 # ds = NewsDataset('data/wiki.db')
-tk = Tokenizer('data/tk1.6.2_200_tag10')
+tk = Tokenizer('data/t2.1_c1')
 
 # In[]
 from src.utils import peek
@@ -38,30 +38,6 @@ print(sl[int(len(sl)*0.75)])
 print(sl[-1])
 
 # In[]
-N = 0
-UNK = set()
-
-for idx, t, a in ds.data:
-    N += len(t) + len(a)
-    tt = tk.tokenize([i for i in t], bos=False, eos=False)
-    ta = tk.tokenize([i for i in a], bos=False, eos=False)
-    for idx, i in enumerate(tt):
-        if isinstance(i, list):
-            if len(i) == 0:
-                continue
-            i = i[-1]
-        if i == 3:
-            UNK.add(t[idx])
-    for idx, i in enumerate(ta):
-        if isinstance(i, list):
-            if len(i) == 0:
-                continue
-            i = i[-1]
-        if i == 3:
-            UNK.add(a[idx])
-
-#In[]
-from tqdm import tqdm
 tl = []
 al = []
 for idx, t, a in tqdm(ds.data):
@@ -70,6 +46,8 @@ for idx, t, a in tqdm(ds.data):
 
 tl=np.array(tl)
 al=np.array(al)
+
+# In[] find unknown
 
 #In[]
 import matplotlib.pyplot as plt
