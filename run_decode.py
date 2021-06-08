@@ -31,8 +31,8 @@ def parse_args():
     parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--sample', default=-1, type=int)
     parser.add_argument('--model_dir', type=str)
-    parser.add_argument('--topk', type=int, default=16)
-    parser.add_argument('--beam', type=str, default=16)
+    parser.add_argument('--topk', type=int, nargs='+', default=[])
+    parser.add_argument('--beam', type=int, nargs='+', default=[])
     parser.add_argument('--ckpt', default='latest', type=str)
     parser.add_argument('--ckpt_pattern', default=r'(\d+).pt', type=str)
     parser.add_argument('--device', default='cpu', type=str)
@@ -89,19 +89,25 @@ def main(args):
                 tk, getid=True)(sdata)
 
         start = timeit.default_timer()
-        predb = beam_search_v2(model, inseq, tk,
-                               lambda b, nx, ny: (nx + ny) * b > 128 * 64, args.beam, args.device, args.maxlen)
-        predt = topk(model, outseq, tk, args.topk, args.device, args.maxlen)
+        preds = []
+        for beam_n in args.beam:
+            p = beam_search_v2(model, inseq, tk,
+                               lambda b, nx, ny: (nx + ny) * b > 128 * 64,
+                               beam_n, args.device, args.maxlen)
+            preds.append((f'beam{beam_n}', p))
+        for topk_k in args.topk:
+            p = topk(model, outseq, tk, topk_k, args.device, args.maxlen)
+            preds.append((f'topk{topk_k}', p))
+
         results = []
-        for t, a, pb, pt in zip(inseq, outseq, predb, predt):
+        for idx in range(len(inseq)):
             results.append((
-                tk.detokenize(t),
-                tk.detokenize(pb),
-                tk.detokenize(pt),
-                tk.detokenize(a[:args.maxlen+1])
+                tk.detokenize(inseq[idx]),
+                *[tk.detokenize(p[idx]) for _, p in preds],
+                tk.detokenize(outseq[idx][:args.maxlen+1])
             ))
         df = pd.DataFrame(results,
-                          columns=['input', f'beam{args.beam}', f'topk{args.topk}', 'target'])
+                          columns=['input', *[n for n, _ in preds], 'target'])
         if args.output is None:
             print(df)
         else:
