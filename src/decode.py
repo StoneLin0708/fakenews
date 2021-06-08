@@ -134,7 +134,7 @@ def beam_search_v2(
                 for b in beams:
                     queue.enq(b)
 
-        # TODO this assum all data can fit in first batch 
+        # TODO this assum all data can fit in first batch
         k = beam_width
         if first:
             k = 1
@@ -226,3 +226,47 @@ def beam_search_v3(
         outputs = genseq.to(device)
 
     return outputs[::beam_width, :].cpu().tolist()
+
+
+@torch.no_grad()
+def topk(
+        model,
+        input_sequence,
+        tokenizer,
+        k: int,
+        device: torch.device,
+        max_seq_len: int,
+) -> List[str]:
+
+    model.eval()
+
+    def pad(x):
+        return torch.nn.utils.rnn.pad_sequence(
+            list(map(torch.LongTensor, x)),
+            padding_value=tokenizer.pad_id,
+            batch_first=True).to(device)
+
+    B = len(input_sequence)
+    outputs = [[tokenizer.bos_id] for i in range(B)]
+
+    eos_id = tokenizer.eos_id
+
+    while True:
+        # Model prediction has shape (B, S, V).
+        pred = torch.nn.functional.softmax(
+            model(pad(input_sequence), pad(outputs)), dim=-1)
+        # (B, V) -> (B, K)
+        probs, indices = pred[:, -1, :].cpu().topk(k=k, dim=-1)
+        nextid = torch.gather(indices, -1,
+                              torch.multinomial(
+                                  torch.nn.functional.softmax(probs, dim=-1), 1)
+                              )
+        for o, n in zip(outputs, nextid):
+            o.append(int(n))
+
+        if len(outputs[0]) > max_seq_len or \
+                all(map(lambda x: x[-1] == eos_id or x[-1] == tokenizer.pad_id, outputs)):
+            break
+    #print(outputs)
+
+    return outputs

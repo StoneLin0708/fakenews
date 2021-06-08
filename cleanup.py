@@ -80,13 +80,16 @@ for _, t, a in ds.data:
     if '<en>>' in a:
         print(a)
         break
+
 # In[]
 tagreg = re.compile(r'(<...?([0-9]+)>)')
 
 alltags = [tagreg.findall(t + a) for idx, (_id, t, a)
            in tqdm(enumerate(ds.data), total=len(ds.data))]
-
 alltaglist = [j for i in filter(lambda x:len(x) > 0, alltags) for j in i]
+
+# In[]
+print(len(set(alltaglist)))
 # In[]
 
 
