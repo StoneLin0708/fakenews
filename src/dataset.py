@@ -15,7 +15,10 @@ class NewsDataset(torch.utils.data.Dataset):
         cursor = conn.cursor()
 
         # Get all news title and article.
-        cursor.execute("SELECT id, title, article FROM news_dataset;")
+        try:
+            cursor.execute("SELECT id, title, article FROM news_dataset;")
+        except Exception as e:
+            cursor.execute("SELECT id, title, article FROM news_table;")
         data = cursor.fetchall()
         if sample is not None and sample > 0:
             N = len(data)
@@ -33,22 +36,22 @@ class NewsDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.data)
 
-    def get_collate_fn(self, tk):
+    def get_collate_fn(self, tk, getid=False):
         def collect_fn(seq):
-            _, x, y = zip(*seq)
-            x, y = list(x), list(y)
+            ids, x, y = zip(*seq)
+            x, y = tk.tokenize(list(x)), tk.tokenize(list(y))
             if self.a > 0:
                 idxs = np.random.choice(len(x), int(
                     len(x) * self.a), replace=False)
                 if self.inplace:
                     for idx in idxs:
-                        x[idx] += y[idx][:self.b]
-                        y[idx] = y[idx][self.b:]
+                        x[idx] = x[idx][:-1] + [tk.sep_id] + y[idx][1:self.b]
+                        y[idx] = [tk.bos_id] + y[idx][self.b:]
                 else:
                     for idx in idxs:
-                        x.append(x[idx] + y[idx][:self.b])
-                        y.append(y[idx][self.b:])
-            return tk.tokenize(list(x)), tk.tokenize(list(y))
+                        x.append(x[idx][:-1] + [tk.sep_id] + y[idx][1:self.b])
+                        y.append([tk.bos_id] + y[idx][self.b:])
+            return (ids, x, y) if getid else (x, y)
         return collect_fn
 
 

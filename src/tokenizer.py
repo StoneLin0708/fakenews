@@ -17,9 +17,10 @@ class Tokenizer:
             self.load(model_path)
 
     def train(self, data_path, max_vocab,
-              model_path, coverage, max_len):
+              model_path, coverage, max_len, tag10):
         tags = ','.join([f'<{j}{i}>' for j in ['per', 'loc', 'org']
                         for i in range(10)])
+        p = f'<sep>,<num>,<en>,<per>,<loc>,<org>,{tags} ' if tag10 else '<sep>'
         sp.SentencePieceTrainer.Train(
             f'--input={data_path} '
             f'--model_prefix={model_path} '
@@ -31,13 +32,14 @@ class Tokenizer:
             f'--max_sentence_length={20480} '
             f'--character_coverage={coverage} '
             f'--max_sentencepiece_length={max_len} '
+            f'--user_defined_symbols={p}'
             # f'--control_symbols=<num>,<en>,<per>,<loc>,<org>,{tags} '
-            f'--user_defined_symbols=<num>,<en>,<per>,<loc>,<org>,{tags} '
         )
 
     def load(self, model_path):
         self.model.Load(f'{model_path}.model')
         self.vocab_size = self.model.GetPieceSize()
+        self.sep_id = self.model.PieceToId('<sep>')
         print(f'loaded {self.vocab_size}')
 
     def is_loaded(self):
@@ -58,10 +60,11 @@ def main(args):
             data_path=args.d,
             max_vocab=args.vocab,
             coverage=args.coverage,
-            max_len=args.max_len
+            max_len=args.max_len,
+            tag10=args.tag10
         )
     else:
-        token = tk.tokenize('今天不想上班')
+        token = tk.tokenize('今天不想上班<sep>好喔')
         print(token)
         print(tk.detokenize(token))
 
@@ -73,5 +76,6 @@ if __name__ == '__main__':
     parser.add_argument('--vocab', type=int)
     parser.add_argument('--max_len', type=int)
     parser.add_argument('--coverage', type=str)
+    parser.add_argument('--tag10', action='store_true', default=False)
     args = parser.parse_args()
     main(args)

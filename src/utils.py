@@ -9,8 +9,8 @@ def markdown_pred_summary(x):
     )
 
 
-def peek(data, n):
-    return [data[i] for i in np.random.choice(len(data), n)]
+def peek(data, n, seed):
+    return [data[i] for i in np.random.default_rng(seed=seed).choice(len(data), n)]
 
 
 def find_latest_ckpt(folder, pattern):
