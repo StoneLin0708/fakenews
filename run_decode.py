@@ -69,7 +69,7 @@ def main(args):
         device = torch.device(args.device)
 
         if args.ckpt == 'latest':
-            args.ckpt = find_latest_ckpt(args.model_dir, args.ckpt_pattern)
+            args.ckpt = find_latest_ckpt(args.model_dir, args.ckpt_pattern).path
         model.load_state_dict(torch.load(
             args.ckpt, map_location=device)['model'])
         model.to(device)
@@ -95,8 +95,9 @@ def main(args):
                                lambda b, nx, ny: (nx + ny) * b > 128 * 64,
                                beam_n, args.device, args.maxlen)
             preds.append((f'beam{beam_n}', p))
+
         for topk_k in args.topk:
-            p = topk(model, outseq, tk, topk_k, args.device, args.maxlen)
+            p = topk(model, inseq, tk, topk_k, args.device, args.maxlen)
             preds.append((f'topk{topk_k}', p))
 
         results = []

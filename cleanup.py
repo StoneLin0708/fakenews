@@ -8,9 +8,9 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 
-original = 'data/news_v2.1.db'
-dataset = 'data/news_dataset_v2.1.db'
-cleantagdataset = 'data/news_dataset_tag10_v2.1.db'
+original = 'data/news_v2.3.db'
+dataset = 'data/news_dataset_v2.3.db'
+cleantagdataset = 'data/news_dataset_tag10_v2.3.db'
 cleandataset = 'data/news_dataset_clean_200_v1.6.2.db'
 
 
@@ -76,11 +76,13 @@ for i, t, a in ds.data:
         break
 
 # In[]
-for _, t, a in ds.data:
-    if '<en>>' in a:
-        print(a)
-        break
-
+broken_tagreg = re.compile(r'(<<+...?[0-9]*>)|(<...?[0-9]*>>+)|(<<+...?[0-9]*>>+)')
+bts = []
+for _id, t, a in ds.data:
+    bt = broken_tagreg.findall(a)
+    bts += list(filter(lambda x:len(x)>0, [j for i in bt for j in i]))
+from collections import Counter
+Counter(bts)
 # In[]
 tagreg = re.compile(r'(<...?([0-9]+)>)')
 
@@ -88,10 +90,7 @@ alltags = [tagreg.findall(t + a) for idx, (_id, t, a)
            in tqdm(enumerate(ds.data), total=len(ds.data))]
 alltaglist = [j for i in filter(lambda x:len(x) > 0, alltags) for j in i]
 
-# In[]
 print(len(set(alltaglist)))
-# In[]
-
 
 def unique(seq):
     seen = set()
@@ -121,6 +120,7 @@ def replace_tag(t, a, tagseq, newtagpat, limitpat, limit=10):
 
 def ordertag():
     for idx, (_id, t, a) in tqdm(enumerate(ds.data), total=len(ds.data)):
+
         tags = tagreg.findall(t + a)
         tags = [(n, int(c) if len(c) > 0 else None) for n, c in tags]
         if len(tags) == 0:
@@ -134,6 +134,12 @@ def ordertag():
             cur_tags = unique(
                 list(filter(lambda x: x[0].startswith(tagpat), tags)))
             t, a = replace_tag(t, a, [n for n, _ in cur_tags], rep, lmpt)
+
+        t = re.sub(r'<+',r'<',t)
+        t = re.sub(r'>+',r'>',t)
+        a = re.sub(r'<+',r'<',a)
+        a = re.sub(r'>+',r'>',a)
+
 
         ds.data[idx] = (_id, t, a)
 

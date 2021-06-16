@@ -4,7 +4,7 @@ import torch
 from torch.utils import tensorboard
 from tqdm import tqdm
 from src.decode import beam_search
-from src.utils import markdown_pred_summary
+from src.utils import markdown_pred_summary, find_latest_ckpt
 
 
 def linear_warnup_lr_ratio(step, warnup, total_steps):
@@ -87,16 +87,18 @@ def train(
 
     summary = tensorboard.SummaryWriter(os.path.join(model_dir, 'log'))
 
-    def load_ckpt():
-        if ckpt is not None:
-            step = int(re.match(r'.+/(\d+).pt', ckpt).group(1))
-            ckpt = torch.load(ckpt)
-            model.load_state_dict(ckpt['model'])
-            optimizer.load_state_dict(ckpt['optimizer'], step)
+    ckpt = find_latest_ckpt(model_dir, r'(\d+).pt')
+
+    global_steps = 0
+    if ckpt is not None:
+        ckpt = torch.load(ckpt.path, map_location=device)
+        model.load_state_dict(['model'])
+        optimizer.load_state_dict(ckpt['optimizer'], ckpt.step)
+        global_steps = ckpt.step
+        print(f'Loaded checkpoint {ckpt.step} from {ckpt.path}')
 
     save_step = save_epoch * len(dataloader)
 
-    global_steps = 0
 
     def pad(inseq, max_len):
         return torch.nn.utils.rnn.pad_sequence(
